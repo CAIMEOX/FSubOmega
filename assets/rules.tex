@@ -1,0 +1,190 @@
+\documentclass[11pt,border=12pt,multi=sheet]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,mathtools,mathpartir,xcolor}
+
+\ifdefined\RulesDark
+  \definecolor{ink}{HTML}{E6EDF3}
+  \definecolor{muted}{HTML}{9DA7B3}
+  \definecolor{accent}{HTML}{79B8FF}
+\else
+  \definecolor{ink}{HTML}{1F2328}
+  \definecolor{muted}{HTML}{59636E}
+  \definecolor{accent}{HTML}{0969DA}
+\fi
+\ifdefined\pdfinfoomitdate\pdfinfoomitdate=1\fi
+\ifdefined\pdftrailerid\pdftrailerid{}\fi
+\ifdefined\pdfsuppressptexinfo\pdfsuppressptexinfo=15\fi
+
+\newenvironment{sheet}{%
+  \begin{minipage}{160mm}\color{ink}%
+  \setlength{\parindent}{0pt}\setlength{\parskip}{5pt}%
+  \setlength{\abovedisplayskip}{7pt}\setlength{\belowdisplayskip}{7pt}%
+}{\end{minipage}}
+\newcommand{\sheettitle}[2]{%
+  {\sffamily\color{accent}\small FULL $F_{<:}^{\omega}$\hfill #1 / 3}\par
+  {\sffamily\bfseries\fontsize{18}{22}\selectfont #2}\par
+  \vspace{2pt}{\color{muted}\hrule height .35pt}\vspace{8pt}}
+\newcommand{\blocktitle}[1]{\par\vspace{5pt}{\sffamily\bfseries #1}\par}
+\newcommand{\note}[1]{{\small\color{muted}#1\par}}
+\newcommand{\source}[1]{\vspace{6pt}{\color{muted}\hrule height .25pt}\vspace{4pt}%
+  {\scriptsize\sffamily Formal definitions: \texttt{#1}\par}}
+\newcommand{\Top}{\mathrm{Top}}
+\newcommand{\wf}{\mathsf{wf}}
+\newcommand{\All}[3]{\forall X<:#1::#2.\,#3}
+\newcommand{\TAbs}[3]{\Lambda X<:#1::#2.\,#3}
+\newcommand{\ki}[3]{#1\vdash #2::#3}
+\newcommand{\su}[4]{#1\vdash #2<:#3::#4}
+\newcommand{\ty}[4]{#1;#2\vdash #3:#4}
+\newcommand{\bound}[2]{\Gamma,X<:#1::#2}
+
+\begin{document}
+
+\begin{sheet}
+\sheettitle{1}{Syntax and kinding}
+\note{Named notation for the de Bruijn formalization. Fresh binders and
+capture-avoiding substitution are understood.}
+
+\[
+\begin{array}{r@{\;}c@{\;}l}
+K,L &::=& * \mid K\Rightarrow L \\[3pt]
+A,B,F &::=& X \mid \Top \mid A\to B \mid \All{A}{K}{B}
+                    \mid \lambda X.\,A \mid F\,A \\[3pt]
+t,u &::=& x \mid \lambda x:A.\,t \mid t\,u
+                 \mid \TAbs{A}{K}{t} \mid t[A]_K \\[3pt]
+\Gamma &::=& \varnothing \mid \Gamma,X<:A::K \\[3pt]
+\Delta &::=& \varnothing \mid \Delta,x:A
+\end{array}
+\]
+\note{Operator-lambda kinds are carried by judgments. Term-level type
+abstraction and application retain their kind annotations.}
+\[
+\Top_*:=\Top
+\qquad
+\Top_{K\Rightarrow L}:=\lambda X.\,\Top_L
+\qquad
+\Gamma,X::K\;:=\;\bound{\Top_K}{K}
+\]
+
+\blocktitle{Type-variable contexts}
+\begin{mathpar}
+\inferrule*[right=C-Empty]{\ }{\vdash\varnothing\;\wf}
+\and
+\inferrule*[right=C-Bind]{\vdash\Gamma\;\wf \\ \ki{\Gamma}{A}{K}}
+  {\vdash\bound{A}{K}\;\wf}
+\end{mathpar}
+
+\blocktitle{Kinding}
+\note{Kinding reads only the kinds in $\Gamma$, independently of bounds.}
+\begin{mathpar}
+\inferrule*[right=K-Var]{(X<:U::K)\in\Gamma}{\ki{\Gamma}{X}{K}}
+\and
+\inferrule*[right=K-Top]{\ }{\ki{\Gamma}{\Top}{*}}
+\and
+\inferrule*[right=K-Arrow]{\ki{\Gamma}{A}{*} \\ \ki{\Gamma}{B}{*}}
+  {\ki{\Gamma}{A\to B}{*}}
+\and
+\inferrule*[right=K-Abs]{\ki{\Gamma,X::K}{A}{L}}
+  {\ki{\Gamma}{\lambda X.\,A}{K\Rightarrow L}}
+\and
+\inferrule*[right=K-All]{\ki{\Gamma}{A}{K} \\ \ki{\bound{A}{K}}{B}{*}}
+  {\ki{\Gamma}{\All{A}{K}{B}}{*}}
+\and
+\inferrule*[right=K-App]{\ki{\Gamma}{F}{K\Rightarrow L} \\ \ki{\Gamma}{A}{K}}
+  {\ki{\Gamma}{F\,A}{L}}
+\end{mathpar}
+
+\blocktitle{Type conversion}
+\[
+(\lambda X.\,A)\,B\longrightarrow_\beta A[B/X]
+\]
+\note{Reduction is closed under all type constructors. Its reflexive,
+symmetric, transitive closure is $\equiv_\beta$. There is no $\eta$ rule.}
+\source{theories/Syntax.v; theories/HigherOrder/Subtyping.v}
+\end{sheet}
+
+\begin{sheet}
+\sheettitle{2}{Declarative subtyping}
+\note{The judgment $\su{\Gamma}{A}{B}{K}$ compares types at the same kind.
+These rules are used with well-formed contexts.}
+
+\begin{mathpar}
+\inferrule*[right=S-Refl]{\ki{\Gamma}{A}{K}}{\su{\Gamma}{A}{A}{K}}
+\and
+\inferrule*[right=S-Top]{\ki{\Gamma}{A}{K}}{\su{\Gamma}{A}{\Top_K}{K}}
+\and
+\inferrule*[right=S-Var]{(X<:A::K)\in\Gamma \\ \ki{\Gamma}{A}{K}}
+  {\su{\Gamma}{X}{A}{K}}
+\and
+\inferrule*[right=S-Trans]{\su{\Gamma}{A}{B}{K} \\ \su{\Gamma}{B}{C}{K}}
+  {\su{\Gamma}{A}{C}{K}}
+\and
+\inferrule*[right=S-Arrow]{\su{\Gamma}{A'}{A}{*} \\ \su{\Gamma}{B}{B'}{*}}
+  {\su{\Gamma}{A\to B}{A'\to B'}{*}}
+\and
+\inferrule*[right=S-All]{\su{\Gamma}{A'}{A}{K} \\ \su{\bound{A'}{K}}{B}{B'}{*}}
+  {\su{\Gamma}{(\All{A}{K}{B})}{(\All{A'}{K}{B'})}{*}}
+\and
+\inferrule*[right=S-Abs]{\su{\bound{\Top_K}{K}}{A}{B}{L}}
+  {\su{\Gamma}{\lambda X.\,A}{\lambda X.\,B}{K\Rightarrow L}}
+\and
+\inferrule*[right=S-App]{\su{\Gamma}{F}{F'}{K\Rightarrow L} \\ \ki{\Gamma}{C}{K}}
+  {\su{\Gamma}{F\,C}{F'\,C}{L}}
+\and
+\inferrule*[right=S-Conv]{\ki{\Gamma}{A}{K} \\ \ki{\Gamma}{B}{K} \\ A\equiv_\beta B}
+  {\su{\Gamma}{A}{B}{K}}
+\end{mathpar}
+
+\blocktitle{Full quantification and pointwise operators}
+\note{S-All permits different bounds. The bound is contravariant, and
+the bodies are compared under the right-hand bound $A'$. S-Abs uses an
+unbounded operator parameter. S-App uses the same argument $C$ on both
+sides; no general covariance rule for operator arguments is present.}
+\note{S-Trans permits arbitrary well-kinded intermediate types. The erasure
+used in the conservativity proof is not an object-language conversion rule.}
+\source{theories/HigherOrder/Subtyping.v}
+\end{sheet}
+
+\begin{sheet}
+\sheettitle{3}{Explicitly annotated typing}
+\note{$\Gamma$ contains type-variable bounds; $\Delta$ contains term-variable
+types. The result type in $\ty{\Gamma}{\Delta}{t}{A}$ has kind $*$.}
+
+\begin{mathpar}
+\inferrule*[right=T-Var]{(x:A)\in\Delta \\ \ki{\Gamma}{A}{*}}
+  {\ty{\Gamma}{\Delta}{x}{A}}
+\and
+\inferrule*[right=T-Abs]{\ki{\Gamma}{A}{*} \\ \ty{\Gamma}{\Delta,x:A}{t}{B}}
+  {\ty{\Gamma}{\Delta}{\lambda x:A.\,t}{A\to B}}
+\and
+\inferrule*[right=T-App]{\ty{\Gamma}{\Delta}{t}{A\to B} \\ \ty{\Gamma}{\Delta}{u}{A}}
+  {\ty{\Gamma}{\Delta}{t\,u}{B}}
+\and
+\inferrule*[right=T-TAbs]{\ki{\Gamma}{A}{K} \\ \ty{\bound{A}{K}}{\Delta}{t}{B}}
+  {\ty{\Gamma}{\Delta}{\TAbs{A}{K}{t}}{\All{A}{K}{B}}}
+\and
+\inferrule*[right=T-TApp]{\ty{\Gamma}{\Delta}{t}{\All{A}{K}{B}} \\ \su{\Gamma}{C}{A}{K}}
+  {\ty{\Gamma}{\Delta}{t[C]_K}{B[C/X]}}
+\and
+\inferrule*[right=T-Sub]{\ty{\Gamma}{\Delta}{t}{A} \\ \su{\Gamma}{A}{B}{*}}
+  {\ty{\Gamma}{\Delta}{t}{B}}
+\end{mathpar}
+
+\note{In T-TAbs, $X$ is fresh for the existing contexts. The named notation
+keeps $\Delta$ unchanged; the de Bruijn implementation shifts its stored types.}
+
+\blocktitle{The old fragment}
+\[
+S,T ::= X\mid\Top\mid S\to T\mid\All{S}{*}{T}
+\]
+\note{Old contexts bind only base-kind type variables with old bounds.
+Old terms use base-kind type abstraction and application, with old lambda
+annotations and old type arguments. The proved conservativity results
+compare judgments whose contexts, terms, and endpoints satisfy these
+restrictions.}
+\note{The formalization specifies kinding, subtyping, and typing. It does
+not define an operational semantics for terms.}
+\source{theories/Terms.v; theories/HigherOrder/Typing.v}
+\end{sheet}
+
+\end{document}

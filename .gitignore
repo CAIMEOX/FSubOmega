@@ -1,0 +1,17 @@
+_build/
+_opam/
+.lia.cache
+.rocq-native/
+*.vo
+*.vos
+*.vok
+*.glob
+.*.aux
+theories/_RocqProject
+assets/*.aux
+assets/*.log
+assets/*.fls
+assets/*.fdb_latexmk
+assets/*.synctex.gz
+assets/*.out
+assets/__pycache__/
