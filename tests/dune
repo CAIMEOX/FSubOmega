@@ -1,0 +1,3 @@
+(rocq.theory
+ (name FsubomegaTests)
+ (theories Stdlib Undecidability Fsubomega))

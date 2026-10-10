@@ -1,0 +1,16 @@
+opam-version: "2.0"
+synopsis: "Conservativity of full higher-order subtyping"
+description: "A modular Rocq development of full F-sub-omega and its second-order fragment."
+maintainer: "caimeo"
+authors: ["caimeo"]
+build: [["dune" "build" "-p" name "-j" jobs]]
+depends: [
+  "dune" {>= "3.22"}
+  "rocq-core" {= "9.2.0"}
+  "rocq-stdlib" {= "9.1.0"}
+  "coq-library-undecidability" {= "dev+9.2"}
+]
+pin-depends: [
+  ["coq-library-undecidability.dev+9.2"
+   "https://codeload.github.com/uds-psl/coq-library-undecidability/tar.gz/c7257b736763d7b2bc3bd25ac47d5fb7ce749c9c"]
+]
